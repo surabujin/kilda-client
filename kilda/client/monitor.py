@@ -1,7 +1,6 @@
 # monitor
 
 import blinker
-import requests
 
 import kilda.client
 
@@ -14,13 +13,17 @@ class Monitor(object):
     def __call__(self, sender, **fields):
         for key, cls in (
                 ('request', HTTPRequestHandler),
-                ('response', HTTPResponseHandler)):
+                ('response', HTTPResponseHandler),
+                ('error', HTTPErrorHandler)):
             try:
-                payload = fields['key']
+                payload = fields[key]
             except KeyError:
                 continue
-            h = cls(sender, payload)
+
+            h = cls(self, sender, payload)
             h()
+
+            break
 
         else:
             self.unhandled(sender, fields)
@@ -51,17 +54,18 @@ class HTTPRequestHandler(AbstractHandler):
 
 class HTTPResponseHandler(AbstractHandler):
     def __call__(self):
-        record = self.record
         print('HTTP >> ', end='')
+        self.fetch_response()
+
+    def fetch_response(self):
+        record = self.record
         if record.response:
-            self.report_response(record.response)
-        elif record.error:
-            self.report_error(record.error)
+            self.out_response(record.response)
         else:
             print('unable to fetch response details')
 
-    def report_response(self, response):
-        print('code={}'.format(response.code), end='')
+    def out_response(self, response):
+        print('code={}'.format(response.status_code), end=' ')
         print('time={}'.format(response.elapsed), end='')
 
         if not response.ok:
@@ -73,3 +77,8 @@ class HTTPResponseHandler(AbstractHandler):
 
     def report_error(self, error):
         print(error)
+
+
+class HTTPErrorHandler(AbstractHandler):
+    def __call__(self):
+        print('HTTP error - {}'.format(self.record))

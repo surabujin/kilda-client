@@ -1,3 +1,3 @@
 # service
 
-from .northbound import Northbound
+from kilda.client.service.northbound import Northbound

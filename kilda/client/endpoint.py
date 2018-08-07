@@ -20,19 +20,18 @@ class AbstractEndpoint(object):
     def http_call(self, request):
         http = self.service.http
 
-        prepared = http.prepare_request(request)
-        prepared = model.HTTPRequest(prepared)
+        request = http.prepare_request(request)
+        request = model.HTTPRequest(request)
 
-        self.http_events.send(self, request=prepared.request)
+        self.http_events.send(self, request=request)
         try:
-            response = http.send(prepared)
-            response.raise_for_status()
-
-            self.http_events.send(prepared.identity, response=model.HTTPResponse(prepared.identity, response=response))
+            response = http.send(request.request)
+            self.http_events.send(request.identity, response=model.HTTPResponse(request.identity, response=response))
         except Exception as e:
-            self.http_events.send(prepared.identity, error=e)
+            self.http_events.send(request.identity, error=e)
             raise
 
+        response.raise_for_status()
         return response
 
 
